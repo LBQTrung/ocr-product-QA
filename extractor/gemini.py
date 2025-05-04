@@ -75,7 +75,7 @@ def extract_ingredients(image_path: str) -> OutputFormat:
 
 def main():
     start_time = time.time()
-    image_path = "images/2.jpg"
+    image_path = "images/1.jpg"
     ingredients = extract_ingredients(image_path)
     print(ingredients)
     end_time = time.time()
