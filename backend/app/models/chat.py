@@ -8,8 +8,8 @@ class Message(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 class SentMessage(BaseModel):
-    content: str = Field(default="")
-    context: dict = Field(default={})
+    chat_id: str
+    content: str
 
 class ProductInformation(BaseModel):
     data: Dict[str, Any]

@@ -3,7 +3,7 @@ from typing import List
 from bson import ObjectId
 from datetime import datetime
 
-from app.models.chat import ChatCreate, ChatUpdate, ChatInDB
+from app.models.chat import ChatCreate, ChatUpdate
 from app.core.database import get_database
 from app.services.gemini import generate_chat_name
 
@@ -25,6 +25,7 @@ def create_chat(chat: ChatCreate, db=Depends(get_database)):
     
     return {"status": "success", "data": chat_dict}
 
+
 @router.get("/chats", response_model=dict)
 def get_chats(db=Depends(get_database)):
     chats = []
@@ -34,6 +35,7 @@ def get_chats(db=Depends(get_database)):
     
     return {"status": "success", "data": chats}
 
+ 
 @router.get("/chats/{chat_id}", response_model=dict)
 def get_chat(chat_id: str, db=Depends(get_database)):
     chat = db.chats.find_one({"_id": ObjectId(chat_id)})
@@ -43,20 +45,33 @@ def get_chat(chat_id: str, db=Depends(get_database)):
     chat["_id"] = str(chat["_id"])
     return {"status": "success", "data": chat}
 
+
 @router.patch("/chats/{chat_id}/rename", response_model=dict)
 def rename_chat(chat_id: str, chat_update: ChatUpdate, db=Depends(get_database)):
-    if not chat_update.chatName:
+    if not chat_update.name:
         raise HTTPException(status_code=400, detail="New chat name is required")
     
+    # Get the chat
+    chat = db.chats.find_one({"_id": ObjectId(chat_id)})
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    
+    # Get the name from the chat
+    name = chat.get("name")
+    if name != "New Chat":
+        raise HTTPException(status_code=400, detail="Chat name cannot be changed")
+    
+    # Update the chat name
     result = db.chats.update_one(
         {"_id": ObjectId(chat_id)},
-        {"$set": {"chatName": chat_update.chatName}}
+        {"$set": {"name": chat_update.name}}
     )
     
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Chat not found")
     
     return {"status": "success", "message": "Chat renamed successfully"}
+
 
 @router.delete("/chats/{chat_id}", response_model=dict)
 def delete_chat(chat_id: str, db=Depends(get_database)):
@@ -66,28 +81,40 @@ def delete_chat(chat_id: str, db=Depends(get_database)):
     
     return {"status": "success", "message": "Chat deleted successfully"}
 
-@router.put("/chat/get-name", response_model=dict)
+
+@router.get("/chats/{chat_id}/get-name", response_model=dict)
 def get_chat_name(chat_id: str, db=Depends(get_database)):
     chat = db.chats.find_one({"_id": ObjectId(chat_id)})
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
     
-    # Get the first user message
-    first_user_message = next(
-        (msg["text"] for msg in chat["messages"] if msg["sender"] == "user"),
-        None
-    )
+    # Get the first user message and bot response
+    messages = chat.get("messages", [])
+    if len(messages) < 2:
+        raise HTTPException(status_code=400, detail="Need at least one user message and one bot response")
     
-    if not first_user_message:
-        raise HTTPException(status_code=400, detail="No user messages found")
+    first_user_message = None
+    first_bot_response = None
+    
+    for msg in messages:
+        if msg["sender"] == "user" and first_user_message is None:
+            first_user_message = msg["text"]
+        elif msg["sender"] == "bot" and first_bot_response is None:
+            first_bot_response = msg["text"]
+        
+        if first_user_message and first_bot_response:
+            break
+    
+    if not first_user_message or not first_bot_response:
+        raise HTTPException(status_code=400, detail="Could not find both user message and bot response")
     
     # Generate chat name using Gemini
-    chat_name = generate_chat_name(first_user_message)
+    chat_name = generate_chat_name(first_user_message, first_bot_response)
     
     # Update chat name
     db.chats.update_one(
         {"_id": ObjectId(chat_id)},
-        {"$set": {"chatName": chat_name}}
+        {"$set": {"name": chat_name}}
     )
     
     return {"status": "success", "data": {"chatName": chat_name}} 

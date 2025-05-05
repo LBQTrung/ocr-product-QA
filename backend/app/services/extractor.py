@@ -115,34 +115,45 @@ def extract_image_info(file: UploadFile, info_type: str) -> Dict[str, Any]:
 def translate_info(info: Dict[str, Any], language: str) -> Dict[str, Any]:
     # Use Gemini to translate the information
     prompt = f"""
-    You are a helpful translator.
+You are a helpful translator.
 
-    Translate the following JSON dictionary into {language}.
-    Instructions:
-    - Translate BOTH the keys and the values.
-    - Keep the structure of the dictionary exactly the same.
-    - Translated keys can contain spaces (do not replace them with underscores).
+Translate the following JSON dictionary into {language}.
+Instructions:
+- Translate ALL keys, values, and any nested objects or arrays into {language}.
+- Do NOT modify the structure — only translate human-readable strings.
+- Keys may contain spaces — do NOT change their format.
+- Return a valid JSON object with only the translated dictionary (no extra text or explanation).
+IMPORTANT: If a value is a dictionary or list, recursively translate all keys and strings inside it.
 
-    Return only the translated dictionary in valid JSON format (no explanation, no extra text).
-    Example:
-    Input:
-    {{ 'greeting': 'Hello', 'farewell message': 'Goodbye'}}
+Example:
+Input:
+{{
+  "greeting": "Hello",
+  "details": {{
+    "user name": "Alice",
+    "hobbies": ["Reading", "Cooking"]
+  }}
+}}
 
-    Output (if target_language is Vietnamese):
-    {{'lời chào': 'Xin chào', 'tin nhắn tạm biệt': 'Tạm biệt'}}
+Output (if target language is Vietnamese):
+{{
+  "lời chào": "Xin chào",
+  "chi tiết": {{
+    "tên người dùng": "Alice",
+    "sở thích": ["Đọc sách", "Nấu ăn"]
+  }}
+}}
 
-    
-    Now translate this:
-    Input:
-    {info}
+Now translate this:
 
-    """
+"""
     print(prompt)
     
     response = client.models.generate_content(
         model="gemini-2.0-flash",
         contents=[
-            prompt
+            "Translate the following JSON dictionary into {language}."
+            f"Input: {info}"
         ],
         config={
             'response_mime_type': 'application/json',

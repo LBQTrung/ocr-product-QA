@@ -3,11 +3,19 @@ from app.core.config import settings
 from typing import List, Dict
 
 # Configure Gemini
-client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 
-def generate_chat_name(message: str) -> str:
-    prompt = f"Generate a short, descriptive name (max 5 words) for a chat that starts with this message: '{message}'"
+
+def generate_chat_name(user_message: str, bot_response: str) -> str:
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+
+    prompt = f"""
+        Generate a short, descriptive name (max 5 words) for a chat based on this conversation:
+        User: {user_message}
+        Bot: {bot_response}
+        The name should reflect the main topic or purpose of this conversation.
+    """
+    
     response = client.models.generate_content(
         model="gemini-2.0-flash",
         contents=[
@@ -20,15 +28,14 @@ def generate_chat_name(message: str) -> str:
     )
     return response.text.strip()
 
-def generate_response(message: str, context: dict) -> str:
-
-    packaging_context = context.get("product_information", {})
+def generate_response(message: str, history_messages: list, product_information: dict) -> str:
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
     
     SYSTEM_PROMPT = f"""
 You are an AI assistant that answers user questions using both prior conversation and structured data extracted from a product's packaging image.
 
 Here is the context extracted from the packaging:
-{packaging_context}
+{product_information}
 
 This context may include:
 - Product name, ingredients, usage instructions, benefits
@@ -41,15 +48,14 @@ Your job is to:
 - If the user asks something unrelated to the context, answer appropriately using general knowledge
 - If required information is missing or unclear in the packaging data, respond gracefully or ask for clarification
 
-Always respond in the same language as the user’s input (Vietnamese or English).
+Always respond in the same language as the user's input (Vietnamese or English).
 """
     
 
     # Format chat history
-    chat_history = context.get("messages", [])
     history_text = "\n".join([
         f"{msg['sender']}: {msg['text']}"
-        for msg in chat_history[-5:]  # Only use last 5 messages for context
+        for msg in history_messages[-5:]  # Only use last 5 messages for context
     ])
     
     user_prompt = f"""
@@ -62,7 +68,7 @@ Assistant:"""
     
     
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-2.0-flash-lite",
         contents=[
             user_prompt,
         ],
