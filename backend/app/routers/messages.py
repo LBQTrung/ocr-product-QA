@@ -5,42 +5,57 @@ from datetime import datetime
 
 from app.core.database import get_database
 from app.services.gemini import generate_response
+from app.models.chat import SentMessage
 
 router = APIRouter()
 
+
 @router.post("/messages/send", response_model=dict)
-def send_message(chat_id: str, content: str, db=Depends(get_database)):
-    # Get chat history
-    chat = db.chats.find_one({"_id": ObjectId(chat_id)})
-    if not chat:
-        raise HTTPException(status_code=404, detail="Chat not found")
+# def send_message(message: SentMessage):
+def send_message(message: SentMessage, db=Depends(get_database)):
+    # # Add user message
+    # user_message = {
+    #     "sender": "user",
+    #     "text": content,
+    #     "timestamp": datetime.utcnow()
+    # }
+    content = message.content
+    context = message.context
+
+    if content == "":
+        raise HTTPException(status_code=400, detail="Content is required")
     
-    # Add user message
-    user_message = {
-        "sender": "user",
-        "text": content,
-        "timestamp": datetime.utcnow()
-    }
-    
-    # Generate bot response
-    bot_response = generate_response(content, chat.get("messages", []))
-    bot_message = {
-        "sender": "bot",
-        "text": bot_response,
-        "timestamp": datetime.utcnow()
-    }
-    
-    # Update chat with new messages
-    db.chats.update_one(
-        {"_id": ObjectId(chat_id)},
-        {
-            "$push": {
-                "messages": {
-                    "$each": [user_message, bot_message]
-                }
-            }
+    if context == {}:
+        raise HTTPException(status_code=400, detail="Context is required")
+
+    bot_response = generate_response(content, context)
+
+    return {
+        "status": "success",
+        "data": {
+            "content": bot_response
         }
-    )
+    }
+    
+    # # Generate bot response
+    # bot_response = generate_response(content, chat.get("messages", []))
+    # bot_message = {
+    #     "sender": "bot",
+    #     "text": bot_response,
+    #     "timestamp": datetime.utcnow()
+    # }
+    
+    # # Update chat with new messages
+    # db.chats.update_one(
+    #     {"_id": ObjectId(chat_id)},
+    #     {
+    #         "$push": {
+    #             "messages": {
+    #                 "$each": [user_message, bot_message]
+    #             }
+    #         }
+    #     }
+    # )
     
     return {
         "status": "success",

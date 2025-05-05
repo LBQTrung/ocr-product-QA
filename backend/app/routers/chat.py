@@ -13,8 +13,13 @@ router = APIRouter()
 def create_chat(chat: ChatCreate, db=Depends(get_database)):
     chat_dict = chat.model_dump()
     chat_dict["userId"] = "user123"  # In a real app, this would come from authentication
-    chat_dict["createdAt"] = datetime.utcnow()
+    chat_dict["createdAt"] = datetime.now().replace(microsecond=0).isoformat()
+    chat_dict["name"] = "New Chat" 
+
+    if chat_dict.get("productInformation") == {}:
+        raise HTTPException(status_code=400, detail="Product information is required")
     
+ 
     result = db.chats.insert_one(chat_dict)
     chat_dict["_id"] = str(result.inserted_id)
     

@@ -7,9 +7,6 @@ import uvicorn
 
 app = FastAPI(title="Chatbot API")
 
-
-connect_to_mongo()
-
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -18,6 +15,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Connect to MongoDB
+app.add_event_handler("startup", connect_to_mongo)
 
 # Include routers
 app.include_router(chat.router, prefix="/api", tags=["chat"])
@@ -29,6 +29,5 @@ def root():
     return {"message": "Welcome to Chatbot API"}
 
 if __name__ == "__main__":
-    
     print("\n🚀 Starting FastAPI server...")
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

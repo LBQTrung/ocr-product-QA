@@ -7,12 +7,16 @@ class Message(BaseModel):
     text: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
+class SentMessage(BaseModel):
+    content: str = Field(default="")
+    context: dict = Field(default={})
+
 class ProductInformation(BaseModel):
     data: Dict[str, Any]
 
 class ChatBase(BaseModel):
-    chatName: str = ""
-    productInformation: Optional[ProductInformation] = None
+    name: str = ""
+    productInformation: dict = {}
     messages: List[Message] = []
     status: str = "active"
 
@@ -20,7 +24,7 @@ class ChatCreate(ChatBase):
     pass
 
 class ChatUpdate(BaseModel):
-    chatName: Optional[str] = None
+    name: Optional[str] = None
     status: Optional[str] = None
 
 class ChatInDB(ChatBase):
