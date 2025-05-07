@@ -1,0 +1,68 @@
+/* General */
+.modal {
+    background: #fff;
+    border-radius: 28px;
+    box-shadow: 0 8px 32px rgba(60,60,60,0.18), 0 1.5px 8px rgba(0,0,0,0.08);
+    padding: 38px 44px 32px 44px;
+    min-width: 420px;
+    width: 600px;
+    height: 450px;
+    margin: 40px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    border: 2px solid #E2E0DF;
+}
+
+
+/*  Step Intro  */
+
+.step-intro-btn {
+    background: #545454;
+    transition: all 0.3s ease;
+}
+
+.step-intro-btn:hover {
+    background: #333;
+}
+
+.step-intro-select {
+    position: relative;
+    padding: 10px 38px 10px 16px;
+    border-radius: 12px;
+    border: none;
+    background: #F3F1F0;
+    color: #888;
+    font-weight: 500;
+    font-size: 17px;
+    outline: none;
+    min-width: 110px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+  }
+  
+.step-intro-arrow {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+}
+.step-intro-select option {
+    background: #F3F1F0;
+    color: #222;
+}
+
+/*  Step Upload  */
+.step-upload-btn {
+    background: #545454;
+}
+
+.step-upload-btn:hover {
+    background: #333;
+}
+

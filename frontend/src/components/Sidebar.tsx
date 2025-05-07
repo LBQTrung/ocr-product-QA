@@ -27,9 +27,12 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
         <IconButton onClick={onToggle} sx={{
           '&:focus': {
             outline: 'none'
+          },
+          '&:hover .sidebar-icon': {
+            color: '#333',
           }
         }}>
-          <ViewSidebarRoundedIcon sx={{ fontSize: '26px', color: '#545454', }} />
+          <ViewSidebarRoundedIcon className="sidebar-icon" sx={{ fontSize: '26px', color: '#545454', }} />
         </IconButton>
         {isOpen && (
           <Typography
