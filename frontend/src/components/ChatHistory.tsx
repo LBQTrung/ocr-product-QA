@@ -12,6 +12,7 @@ export type Message = {
 interface ChatHistoryProps {
   messages: Message[];
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  isLoading: boolean;
 }
 
 const ChatHistory = ({ messages, messagesEndRef, isLoading }: ChatHistoryProps) => (

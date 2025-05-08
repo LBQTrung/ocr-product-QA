@@ -8,9 +8,10 @@ interface ChatInputProps {
   setMessage: (msg: string) => void;
   handleSend: () => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  setShowProductDetails: (show: boolean) => void;
 }
 
-const ChatInput = ({ message, setMessage, handleSend, handleKeyDown }: ChatInputProps) => {
+const ChatInput = ({ message, setMessage, handleSend, handleKeyDown, setShowProductDetails }: ChatInputProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const adjustTextareaHeight = () => {
@@ -44,12 +45,15 @@ const ChatInput = ({ message, setMessage, handleSend, handleKeyDown }: ChatInput
             minHeight: '24px',
             maxHeight: '168px', // 7 lines * 24px
             overflowY: 'auto',
-            resize: 'none',
             color: '#545454',
           }}
         />
         <div className="chat-input-actions">
-          <button className="product-details-btn" type="button">
+          <button 
+            className="product-details-btn" 
+            type="button"
+            onClick={() => setShowProductDetails(true)}
+          >
             <InfoRoundedIcon /> Product details
           </button>
           <button className="send-btn" type="button" onClick={handleSend}>
