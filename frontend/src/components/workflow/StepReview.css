@@ -1,0 +1,62 @@
+.review-content {
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* Customize scrollbar */
+.review-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.review-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.review-content::-webkit-scrollbar-thumb {
+  background: #b3aea9;
+  border-radius: 5px;
+}
+
+.review-content::-webkit-scrollbar-thumb:hover {
+  background: #8f8b87;
+}
+
+/* Hide scrollbar buttons */
+.review-content::-webkit-scrollbar-button {
+  display: none;
+}
+
+.image-preview-container {
+  position: relative;
+  width: 120px;
+  height: 150px;
+}
+
+.image-preview-container:hover .image-preview-tooltip {
+  display: block;
+}
+
+.image-preview-tooltip {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  border: 1px solid #e0e0e0;
+  pointer-events: none;
+  width: 300px;
+  height: 300px;
+  overflow: hidden;
+}
+
+.image-preview-tooltip img {
+  width: 600px;
+  height: 600px;
+  border-radius: 4px;
+  object-fit: cover;
+  transform-origin: 0 0;
+} 
