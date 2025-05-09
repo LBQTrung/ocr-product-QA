@@ -1,11 +1,19 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.routers import chat, extractor, messages
 from app.core.config import settings
 from app.core.database import connect_to_mongo
 import uvicorn
+import os
 
 app = FastAPI(title="Chatbot API")
+
+# Create uploads directory if it doesn't exist
+os.makedirs("static/uploads", exist_ok=True)
+
+# Mount static files directory
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Configure CORS
 app.add_middleware(
@@ -30,4 +38,4 @@ def root():
 
 if __name__ == "__main__":
     print("\n🚀 Starting FastAPI server...")
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=settings.PORT, reload=True)

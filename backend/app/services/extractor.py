@@ -6,6 +6,9 @@ from app.models.extractor import IngredientsOutputFormat, OtherInfoOutputFormat
 from google.genai.types import Part
 import io
 from PIL import Image
+import os
+import uuid
+from datetime import datetime
 
 
 EXTRACT_INGREDIENTS_PROMPT = """
@@ -84,6 +87,8 @@ def extract_image_info(file: UploadFile, info_type: str) -> Dict[str, Any]:
     if info_type == "ingredients":
         prompt = EXTRACT_INGREDIENTS_PROMPT
         output_format = IngredientsOutputFormat
+
+        
     elif info_type == "other_info":
         prompt = EXTRACT_OTHER_INFO_PROMPT
         output_format = OtherInfoOutputFormat
@@ -94,6 +99,7 @@ def extract_image_info(file: UploadFile, info_type: str) -> Dict[str, Any]:
         
         # Generate content with both text and image
         response = client.models.generate_content(
+            # model="gemini-2.5-flash-preview-04-17",
             model="gemini-2.0-flash",
             contents=[
                 "Extract the informationfrom the image.",
@@ -106,8 +112,9 @@ def extract_image_info(file: UploadFile, info_type: str) -> Dict[str, Any]:
                 "system_instruction": prompt
             }
         )
-        print(response.text)
+        
         return response.parsed.__dict__
+    
     except Exception as e:
         print(f"Error processing image: {str(e)}")
         raise e

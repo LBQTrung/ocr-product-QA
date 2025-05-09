@@ -56,11 +56,6 @@ def rename_chat(chat_id: str, chat_update: ChatUpdate, db=Depends(get_database))
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
     
-    # Get the name from the chat
-    name = chat.get("name")
-    if name != "New Chat":
-        raise HTTPException(status_code=400, detail="Chat name cannot be changed")
-    
     # Update the chat name
     result = db.chats.update_one(
         {"_id": ObjectId(chat_id)},
@@ -110,11 +105,5 @@ def get_chat_name(chat_id: str, db=Depends(get_database)):
     
     # Generate chat name using Gemini
     chat_name = generate_chat_name(first_user_message, first_bot_response)
-    
-    # Update chat name
-    db.chats.update_one(
-        {"_id": ObjectId(chat_id)},
-        {"$set": {"name": chat_name}}
-    )
     
     return {"status": "success", "data": {"chatName": chat_name}} 

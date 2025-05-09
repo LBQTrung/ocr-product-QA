@@ -17,4 +17,7 @@ class OtherInfoOutputFormat(BaseModel):
     manufacturer: str
     usage_instructions: str
     storage_instructions: str
-    nutritional_info: str
+    nutritional_info: dict
+
+# dict 
+# nutritional_info: 

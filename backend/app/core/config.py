@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     DATABASE_NAME: str = "chatbot_db"
     GEMINI_API_KEY: Optional[str] = None
     OPENROUTER_API_KEY: Optional[str] = None
+    HOST: Optional[str] = "http://localhost"
+    PORT: Optional[int] = 8000
 
     class Config:
         env_file = ".env"
