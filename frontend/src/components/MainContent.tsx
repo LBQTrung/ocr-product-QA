@@ -10,28 +10,55 @@ import ChatInput from './ChatInput';
 import ProductDetailsModal from './ProductDetailsModal';
 import './Chat.css';
 
-const BOT_REPLY = 'This product contains Alcohol Denat, which may cause dryness or irritation for sensitive skin. If you have reactive skin, consider patch testing first or consult a dermatologist.';
-
 interface ExtractedData {
-  ingredients: string[];
+  Ingredients: string[];
   image: string;
-  [key: string]: any;
+  [key: string]: string | string[] | undefined
 }
 
-const MainContent = () => {
+interface Chat {
+  _id: string;
+  name: string;
+  messages: Message[];
+  productInformation: ExtractedData;
+}
+
+interface MainContentProps {
+  selectedChat: Chat | null;
+}
+
+const MainContent = ({ selectedChat }: MainContentProps) => {
   const [step, setStep] = useState(1); // 1: Intro, 2: Upload, 3: Loading, 4: Review, 5: Chatbot
-  const [language, setLanguage] = useState('en');
+  const [language, setLanguage] = useState('English');
   const [image, setImage] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [loadingStep, setLoadingStep] = useState<1 | 2 | 3>(1);
   const [showProductDetails, setShowProductDetails] = useState(false);
-
-  // Chatbot states
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [isFirstMessage, setIsFirstMessage] = useState(true);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [hasSentMessage, setHasSentMessage] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Effect to handle selected chat
+  useEffect(() => {
+    if (selectedChat) {
+      setChatId(selectedChat._id);
+      setMessages(selectedChat.messages);
+      setExtractedData(selectedChat.productInformation);
+      setStep(5); // Move to chat step
+      setIsFirstMessage(false);
+    } else {
+      // Reset states when no chat is selected
+      setStep(1);
+      setChatId(null);
+      setMessages([]);
+      setExtractedData(null);
+      setIsFirstMessage(true);
+    }
+  }, [selectedChat]);
 
   // Effect để scroll xuống dưới cùng khi có tin nhắn mới
   useEffect(() => {
@@ -47,26 +74,100 @@ const MainContent = () => {
   // Effect để tự động chuyển loadingStep khi step === 3
   useEffect(() => {
     if (step === 3 && image) {
-      setLoadingStep(1);
-      const timers: ReturnType<typeof setTimeout>[] = [];
-      timers.push(setTimeout(() => setLoadingStep(2), 2000)); // Mô phỏng Extract API
-      timers.push(setTimeout(() => setLoadingStep(3), 4000)); // Mô phỏng Translate API
-      timers.push(setTimeout(() => {
-        const newData: ExtractedData = {
-          ingredients: ['Water', 'Glycerin', 'Niacinamide', 'Alcohol Denat', 'Fragrance'],
-          usage: 'Apply evenly to face twice daily after cleansing.',
-          image: image,
-        };
-        setExtractedData(newData);
-        setStep(4);
-      }, 6000));
-      return () => timers.forEach(clearTimeout);
+      const executeSteps = async () => {
+        try {
+          // Step 1: Initial loading
+          setLoadingStep(1);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay for UX
+
+          // Step 2: Extract data
+          setLoadingStep(2);
+          // Convert base64 to blob
+          const response = await fetch(image);
+          const blob = await response.blob();
+
+          const formData = new FormData();
+          formData.append('file', blob, 'image.jpg');
+
+          // Call API
+          const extractResponse = await fetch('http://localhost:8000/api/extractor/extract', {
+            method: 'POST',
+            body: formData,
+          });
+
+          // Parse response
+          const extractData = await extractResponse.json();
+          
+          setLoadingStep(3);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay for UX
+
+          // Call api to translate
+          const translateResponse = await fetch('http://localhost:8000/api/extractor/translate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+          },
+            body: JSON.stringify({
+              info: extractData.data,
+              language: language
+            }),
+          });
+
+          const translateData = await translateResponse.json();
+          console.log(translateData);
+          
+          if (translateData.status === 'success') {
+            setExtractedData({
+              ...translateData.data,
+              image: image
+            });
+          } else {
+            throw new Error('Invalid response format');
+          }
+          
+          // Move to review step
+          setStep(4);
+        } catch (error) {
+          console.error('Error extracting data:', error);
+          // Handle error appropriately
+          setLoadingStep(3);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          setStep(4);
+        }
+      };
+
+      executeSteps();
     }
   }, [step, image]);
 
-  // Chatbot logic giữ nguyên
+  // Function to generate and update chat title
+  const generateChatTitle = async (chatId: string) => {
+    try {
+      // Call API to generate title
+      const titleResponse = await fetch(`http://localhost:8000/api/chats/${chatId}/get-name`);
+      const titleData = await titleResponse.json();
+      
+      if (titleData.status === 'success' && titleData.data && titleData.data.chatName) {
+        // Update chat title using new rename endpoint
+        await fetch(`http://localhost:8000/api/chats/${chatId}/rename`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: titleData.data.chatName
+          })
+        });
+      }
+    } catch (error) {
+      console.error('Error generating chat title:', error);
+      // Silently fail - don't affect user experience
+    }
+  };
+
+  // Update handleSend to include title generation for first message
   const handleSend = async () => {
-    if (message.trim() !== '') {
+    if (message.trim() !== '' && chatId) {
       setHasSentMessage(true);
       const userMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -76,16 +177,47 @@ const MainContent = () => {
       setMessages(prev => [...prev, userMsg]);
       setMessage('');
       setIsLoading(true);
+      
       try {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const botMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: BOT_REPLY,
-          sender: 'bot'
-        };
-        setMessages(prev => [...prev, botMessage]);
+        // Call chat API to send message
+        const response = await fetch('http://localhost:8000/api/messages/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+            content: userMsg.text
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+          const botMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            text: data.data.content,
+            sender: 'bot'
+          };
+          setMessages(prev => [...prev, botMessage]);
+
+          // Generate title for first message
+          if (isFirstMessage) {
+            setIsFirstMessage(false);
+            // Generate title asynchronously without waiting
+            generateChatTitle(chatId).catch(console.error);
+          }
+        } else {
+          throw new Error('Failed to get response from chat API');
+        }
       } catch (error) {
         console.error('Error getting response:', error);
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: 'Sorry, I encountered an error. Please try again.',
+          sender: 'bot'
+        };
+        setMessages(prev => [...prev, errorMessage]);
       } finally {
         setIsLoading(false);
       }
@@ -107,7 +239,60 @@ const MainContent = () => {
       {step == 1 && <StepIntro language={language} setLanguage={setLanguage} onStart={() => setStep(2)} />}
       {step == 2 && <StepUpload onUpload={img => { setImage(img); handleExtractData(); }} />}
       {step == 3 && <StepLoading step={loadingStep} />}
-      {step == 4 && extractedData && <StepReview data={extractedData} setData={setExtractedData} onContinue={() => setStep(5)} />}
+      {step == 4 && extractedData && <StepReview data={extractedData} setData={setExtractedData} onContinue={async () => {
+        try {
+          // API 1: Upload image to get static link
+          const formData = new FormData();
+          // Convert base64 to blob
+          const response = await fetch(extractedData.image);
+          const blob = await response.blob();
+          formData.append('file', blob, 'image.jpg');
+
+          const imageResponse = await fetch('http://localhost:8000/api/extractor/upload', {
+            method: 'POST',
+            body: formData,
+          });
+          const imageData = await imageResponse.json();
+          console.log("Dữ liệu ảnh: ", imageData);
+      
+          const updatedData = {
+            ...extractedData,
+            image: imageData.data,
+          };
+
+          // API 2: Create chat with updated information
+          const createChatResponse = await fetch('http://localhost:8000/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              productInformation: updatedData,
+            })
+          });
+
+          const createChatData = await createChatResponse.json();
+          console.log("Dữ liệu chat: ", createChatData);
+          
+          if (createChatData.status === 'success' && createChatData.data && createChatData.data._id) {
+            setChatId(createChatData.data._id); // Store chat_id
+          } else {
+            throw new Error('Failed to get chat ID from response');
+          }
+          
+          // Update state and wait for it to complete
+          await new Promise<void>(resolve => {
+            setExtractedData(updatedData);
+            resolve();
+          });
+          
+          // Move to chat step
+          setStep(5);
+        } catch (error) {
+          console.error('Error creating chat:', error);
+          // Handle error appropriately
+        }
+      }} />}
       {step == 5 && (
         <div className="chat-container">
           {!hasSentMessage ? (

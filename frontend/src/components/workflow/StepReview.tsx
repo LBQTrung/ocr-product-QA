@@ -6,9 +6,9 @@ import './StepReview.css';
 
 interface StepReviewProps {
   data: {
-    ingredients: string[];
+    Ingredients: string[];
     image: string;
-    [key: string]: any; // Allow for additional fields
+    [key: string]: string | string[] | undefined; // Allow for additional fields
   };
   setData: (data: StepReviewProps['data']) => void;
   onContinue: () => void;
@@ -54,19 +54,19 @@ const StepReview: React.FC<StepReviewProps> = ({ data, setData, onContinue }) =>
   };
 
   const handleRemoveIngredient = (idx: number) => {
-    const newIngredients = data.ingredients.filter((_, i) => i !== idx);
-    setData({ ...data, ingredients: newIngredients });
+    const newIngredients = data.Ingredients.filter((_, i) => i !== idx);
+    setData({ ...data, Ingredients: newIngredients });
   };
 
   const handleAddIngredient = () => {
     if (newIngredient.trim()) {
-      setData({ ...data, ingredients: [...data.ingredients, newIngredient.trim()] });
+      setData({ ...data, Ingredients: [...data.Ingredients, newIngredient.trim()] });
       setNewIngredient('');
     }
   };
 
   // Get all fields except ingredients and image
-  const additionalFields = Object.entries(data).filter(([key]) => !['ingredients', 'image'].includes(key));
+  const additionalFields = Object.entries(data).filter(([key]) => !['Ingredients', 'image'].includes(key));
 
   return (
     <div
@@ -137,7 +137,7 @@ const StepReview: React.FC<StepReviewProps> = ({ data, setData, onContinue }) =>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 18 }}>Ingredients</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-              {data.ingredients.map((ing, idx) => (
+              {data.Ingredients.map((ing: string, idx: number) => (
                 <span key={idx} style={{ display: 'flex', alignItems: 'center', background: '#e6e6e6', borderRadius: 20, padding: '4px 12px', fontSize: 15 }}>
                   {ing}
                   <button onClick={() => handleRemoveIngredient(idx)} style={{ marginLeft: 6, background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontWeight: 700, fontSize: 16, lineHeight: 1, padding: 0 }} title="Remove">

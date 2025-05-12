@@ -2,12 +2,34 @@ import { Box, IconButton, List, ListItem, ListItemButton, ListItemText, Paper, T
 import { Add as AddIcon } from '@mui/icons-material';
 import ViewSidebarRoundedIcon from '@mui/icons-material/ViewSidebarRounded';
 
+interface Message {
+  id: string;
+  sender: 'user' | 'bot';
+  text: string;
+}
+
+interface ExtractedData {
+  Ingredients: string[];
+  image: string;
+  [key: string]: string | string[] | undefined;
+}
+
+interface Chat {
+  _id: string;
+  name: string;
+  messages: Message[];
+  productInformation: ExtractedData;
+}
+
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
+  onNewChat: () => void;
+  chatList: Chat[];
+  onSelectChat: (chat: Chat) => void;
 }
 
-const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
+const Sidebar = ({ isOpen, onToggle, onNewChat, chatList, onSelectChat }: SidebarProps) => {
   return (
     <Paper
       sx={{
@@ -77,6 +99,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
       >
         <IconButton
           className="add-button"
+          onClick={onNewChat}
           sx={{
             backgroundColor: '#545454',
             color: 'white',
@@ -98,7 +121,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
         </IconButton>
         <Typography
           variant="subtitle2"
-          onClick={() => {/* Handle new chat click */}}
+          onClick={onNewChat}
           sx={{
             color: 'black',
             fontSize: '16px',
@@ -145,11 +168,14 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
           Recent Chats
         </Typography>
         <List sx={{ pt: "0" }}>
-          {['Một năm trước tôi đã làm gì nhỉ dsaf', 'Hôm qua tôi đã làm gì', 'Hôm nay tôi đã làm gì'].map((text) => (
-            <ListItem key={text} disablePadding>
-              <ListItemButton sx={{ pt: "0" }}>
+          {chatList.map((chat) => (
+            <ListItem key={chat._id} disablePadding>
+              <ListItemButton 
+                sx={{ pt: "0" }}
+                onClick={() => onSelectChat(chat)}
+              >
                 <ListItemText
-                  primary={text}
+                  primary={chat.name || 'Untitled Chat'}
                   sx={{
                     opacity: isOpen ? 1 : 0,
                     transition: 'opacity 0.3s ease',

@@ -4,9 +4,9 @@ import './ProductDetailsModal.css';
 
 interface ProductDetailsModalProps {
   data: {
-    ingredients: string[];
+    Ingredients: string[];
     image: string;
-    [key: string]: any;
+    [key: string]: string | string[] | undefined;
   };
   onClose: () => void;
 }
@@ -48,7 +48,7 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ data, onClose
             <div className="ingredients-section">
               <h3>Ingredients</h3>
               <div className="ingredients-list">
-                {data.ingredients.map((ing, idx) => (
+                {data.Ingredients.map((ing: string, idx: number) => (
                   <span key={idx} className="ingredient-tag">
                     {ing}
                   </span>
