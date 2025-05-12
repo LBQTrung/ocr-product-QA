@@ -12,6 +12,7 @@ router = APIRouter()
 @router.post("/chat", response_model=dict)
 def create_chat(chat: ChatCreate, db=Depends(get_database)):
     chat_dict = chat.model_dump()
+    print(chat_dict)
     chat_dict["userId"] = "user123"  # In a real app, this would come from authentication
     chat_dict["createdAt"] = datetime.now().replace(microsecond=0).isoformat()
     chat_dict["name"] = "New Chat" 
@@ -29,7 +30,7 @@ def create_chat(chat: ChatCreate, db=Depends(get_database)):
 @router.get("/chats", response_model=dict)
 def get_chats(db=Depends(get_database)):
     chats = []
-    for chat in db.chats.find():
+    for chat in db.chats.find().sort("createdAt", -1):  # Changed to -1 for descending order (newest first)
         chat["_id"] = str(chat["_id"])
         chats.append(chat)
     
@@ -83,6 +84,8 @@ def get_chat_name(chat_id: str, db=Depends(get_database)):
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
     
+    product_information = chat.get("productInformation")
+    
     # Get the first user message and bot response
     messages = chat.get("messages", [])
     if len(messages) < 2:
@@ -104,6 +107,6 @@ def get_chat_name(chat_id: str, db=Depends(get_database)):
         raise HTTPException(status_code=400, detail="Could not find both user message and bot response")
     
     # Generate chat name using Gemini
-    chat_name = generate_chat_name(first_user_message, first_bot_response)
+    chat_name = generate_chat_name(first_user_message, first_bot_response, product_information)
     
-    return {"status": "success", "data": {"chatName": chat_name}} 
+    return {"status": "success", "data": {"chatName": chat_name}}

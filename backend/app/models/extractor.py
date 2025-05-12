@@ -17,7 +17,12 @@ class OtherInfoOutputFormat(BaseModel):
     manufacturer: str
     usage_instructions: str
     storage_instructions: str
-    nutritional_info: dict
+    nutritional_info: str
+
+
+class TranslateRequest(BaseModel):
+    info: Dict[str, Any]
+    language: str
 
 # dict 
 # nutritional_info: 

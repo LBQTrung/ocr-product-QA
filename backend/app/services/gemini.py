@@ -3,17 +3,20 @@ from app.core.config import settings
 from typing import List, Dict
 
 # Configure Gemini
-
-
-
-def generate_chat_name(user_message: str, bot_response: str) -> str:
+def generate_chat_name(user_message: str, bot_response: str, production_information: dict) -> str:
     client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
     prompt = f"""
-        Generate a short, descriptive name (max 5 words) for a chat based on this conversation:
+        Generate a short, descriptive name (max 5 words) for a chat based on the following conversation and contextual information. 
+        The name should reflect the main topic or purpose of the conversation. 
+        Avoid generic titles if the user message is vague — instead, use the provided production information to determine intent. 
+        Use the same language as the user and bot messages.
+        Conversation:
         User: {user_message}
         Bot: {bot_response}
-        The name should reflect the main topic or purpose of this conversation.
+
+        Production Information:
+        {production_information}
     """
     
     response = client.models.generate_content(
@@ -42,13 +45,23 @@ This context may include:
 - Nutritional information, warnings, dosage (if applicable)
 - Manufacturer info, expiry date, certifications, etc.
 
-Your job is to:
-- Use this information to generate accurate, relevant, and helpful responses
-- Maintain a natural, conversational tone based on the chat history
-- If the user asks something unrelated to the context, answer appropriately using general knowledge
-- If required information is missing or unclear in the packaging data, respond gracefully or ask for clarification
+Your responsibilities:
+1. Leverage all available information from the extracted data to provide accurate, relevant, and helpful responses.
+2. Use bold (**...**) for emphasis when needed.
+3. Use lists for clarity:
+- nordered lists for general items;
+- Numbered lists for steps or procedures.
+4. If ingredients or active substances are provided, you may apply general knowledge to assess:
+- Safety (e.g. allergens, contraindications);
+- Health benefits;
+- Potential side effects.
+5. Maintain a natural, conversational tone that aligns with the previous chat history.
+6. If the user asks something unrelated to the packaging data, respond using general knowledge.
+7. If the required information is missing or unclear, you should:
+- Ask the user for clarification;
+- Or gracefully mention the limitation.
 
-Always respond in the same language as the user's input (Vietnamese or English).
+**IMPORTANT**: Always respond in the same language as the user’s input (Vietnamese or English).
 """
     
 

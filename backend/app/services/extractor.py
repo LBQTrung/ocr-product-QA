@@ -9,6 +9,7 @@ from PIL import Image
 import os
 import uuid
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 
 
 EXTRACT_INGREDIENTS_PROMPT = """
@@ -80,15 +81,12 @@ Output format:
 
 client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
-def extract_image_info(file: UploadFile, info_type: str) -> Dict[str, Any]:
+def extract_image_info(image: bytes, info_type: str) -> Dict[str, Any]:
     # Read image data
-    image = file.file.read()
     
     if info_type == "ingredients":
         prompt = EXTRACT_INGREDIENTS_PROMPT
         output_format = IngredientsOutputFormat
-
-        
     elif info_type == "other_info":
         prompt = EXTRACT_OTHER_INFO_PROMPT
         output_format = OtherInfoOutputFormat
@@ -99,7 +97,6 @@ def extract_image_info(file: UploadFile, info_type: str) -> Dict[str, Any]:
         
         # Generate content with both text and image
         response = client.models.generate_content(
-            # model="gemini-2.5-flash-preview-04-17",
             model="gemini-2.0-flash",
             contents=[
                 "Extract the informationfrom the image.",
@@ -157,7 +154,7 @@ Now translate this:
     print(prompt)
     
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash-preview-04-17",
         contents=[
             "Translate the following JSON dictionary into {language}."
             f"Input: {info}"

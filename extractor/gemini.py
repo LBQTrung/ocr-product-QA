@@ -50,7 +50,7 @@ class OutputFormat(BaseModel):
 
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode("utf-8")
+        return image_file.read()
 
 
 def extract_ingredients(image_path: str) -> OutputFormat:

@@ -5,26 +5,53 @@ from app.core.config import settings
 import os
 import uuid
 from datetime import datetime
-
+from concurrent.futures import ThreadPoolExecutor
+from app.models.extractor import TranslateRequest
 
 router = APIRouter()
 
 @router.post("/extractor/extract", response_model=dict)
-async def extract_info(info_type: str, file: UploadFile = File(...)):
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="File must be an image")
-    
-    if info_type == "":
-        raise HTTPException(status_code=400, detail="Info type is required")
-    
-    extracted_info = extract_image_info(file, info_type)
-    return {"status": "success", "data": extracted_info}
-
-
-@router.post("/extractor/translate", response_model=dict)
-async def translate_extracted_info(info: Dict[str, Any], language: str = "Vietnamese"):
+async def extract_info(file: UploadFile = File(...)):
     try:
-        translated_info = translate_info(info, language)
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        image = file.file.read()
+        
+        # Process both info types in parallel using ThreadPoolExecutor
+        with ThreadPoolExecutor() as executor:
+            # Submit both tasks
+            ingredients_future = executor.submit(extract_image_info, image, "ingredients")
+            other_info_future = executor.submit(extract_image_info, image, "other_info")
+            
+            # Get results
+            ingredients_result = ingredients_future.result()
+            other_info_result = other_info_future.result()
+            
+        # Combine results
+        combined_result = {
+            "Ingredients": ingredients_result["ingredients"],
+            "Product name": other_info_result["product_name"],
+            "Brand": other_info_result["brand"],
+            "Net content": other_info_result["net_content"],
+            "Manufacturing date": other_info_result["manufacturing_date"],
+            "Expiry date": other_info_result["expiry_date"],
+            "Country of origin": other_info_result["country_of_origin"],
+            "Manufacturer": other_info_result["manufacturer"],
+            "Usage instructions": other_info_result["usage_instructions"],
+            "Storage instructions": other_info_result["storage_instructions"],
+            "Nutritional info": other_info_result["nutritional_info"],
+        }
+        
+        return {"status": "success", "data": combined_result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/extractor/translate")
+async def translate_extracted_info(request: TranslateRequest):
+    try:
+        translated_info = translate_info(request.info, request.language)
         return {"status": "success", "data": translated_info}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
