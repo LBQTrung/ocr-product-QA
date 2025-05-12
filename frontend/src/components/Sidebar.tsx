@@ -1,6 +1,7 @@
-import { Box, IconButton, List, ListItem, ListItemButton, ListItemText, Paper, Typography } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Box, IconButton, List, ListItem, ListItemButton, ListItemText, Paper, Typography, Menu, MenuItem } from '@mui/material';
+import { Add as AddIcon, MoreVert as MoreVertIcon } from '@mui/icons-material';
 import ViewSidebarRoundedIcon from '@mui/icons-material/ViewSidebarRounded';
+import { useState } from 'react';
 
 interface Message {
   id: string;
@@ -27,9 +28,66 @@ interface SidebarProps {
   onNewChat: () => void;
   chatList: Chat[];
   onSelectChat: (chat: Chat) => void;
+  onRenameChat: (chatId: string, newName: string) => Promise<void>;
+  onDeleteChat: (chatId: string) => Promise<void>;
 }
 
-const Sidebar = ({ isOpen, onToggle, onNewChat, chatList, onSelectChat }: SidebarProps) => {
+const Sidebar = ({ isOpen, onToggle, onNewChat, chatList, onSelectChat, onRenameChat, onDeleteChat }: SidebarProps) => {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [newChatName, setNewChatName] = useState('');
+
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, chatId: string) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+    setSelectedChatId(chatId);
+    const chat = chatList.find(c => c._id === chatId);
+    if (chat) {
+      setNewChatName(chat.name);
+    }
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedChatId(null);
+    setIsRenaming(false);
+  };
+
+  const handleRenameClick = () => {
+    setIsRenaming(true);
+  };
+
+  const handleRenameSubmit = async () => {
+    if (selectedChatId && newChatName.trim()) {
+      try {
+        await onRenameChat(selectedChatId, newChatName.trim());
+        handleMenuClose();
+      } catch (error) {
+        console.error('Error renaming chat:', error);
+      }
+    }
+  };
+
+  const handleDeleteClick = async () => {
+    if (selectedChatId) {
+      try {
+        await onDeleteChat(selectedChatId);
+        handleMenuClose();
+      } catch (error) {
+        console.error('Error deleting chat:', error);
+      }
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleRenameSubmit();
+    } else if (e.key === 'Escape') {
+      handleMenuClose();
+    }
+  };
+
   return (
     <Paper
       sx={{
@@ -73,6 +131,7 @@ const Sidebar = ({ isOpen, onToggle, onNewChat, chatList, onSelectChat }: Sideba
       </Box>
 
       <Box
+        onClick={onNewChat}
         sx={isOpen ? { 
           display: 'flex', 
           alignItems: 'center', 
@@ -169,29 +228,122 @@ const Sidebar = ({ isOpen, onToggle, onNewChat, chatList, onSelectChat }: Sideba
         </Typography>
         <List sx={{ pt: "0" }}>
           {chatList.map((chat) => (
-            <ListItem key={chat._id} disablePadding>
+            <ListItem 
+              key={chat._id} 
+              disablePadding
+              secondaryAction={
+                isOpen && (
+                  <IconButton
+                    edge="end"
+                    onClick={(e) => handleMenuClick(e, chat._id)}
+                    sx={{
+                      opacity: selectedChatId === chat._id ? 1 : 0,
+                      transition: 'opacity 0.2s ease',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                      },
+                      '.MuiListItem-root:hover &': {
+                        opacity: 1,
+                      },
+                      '.MuiListItem-root:hover &, &.Mui-focusVisible': {
+                        opacity: 1,
+                      }
+                    }}
+                  >
+                    <MoreVertIcon sx={{ fontSize: '20px', color: '#545454' }} />
+                  </IconButton>
+                )
+              }
+            >
               <ListItemButton 
-                sx={{ pt: "0" }}
+                sx={{ 
+                  pt: "0",
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  },
+                }}
                 onClick={() => onSelectChat(chat)}
               >
-                <ListItemText
-                  primary={chat.name || 'Untitled Chat'}
-                  sx={{
-                    opacity: isOpen ? 1 : 0,
-                    transition: 'opacity 0.3s ease',
-                    '& .MuiTypography-root': {
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      maxWidth: '250px'
-                    }
-                  }}
-                />
+                {isRenaming && selectedChatId === chat._id ? (
+                  <input
+                    type="text"
+                    value={newChatName}
+                    onChange={(e) => setNewChatName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleRenameSubmit}
+                    autoFocus
+                    style={{
+                      border: 'none',
+                      outline: 'none',
+                      background: 'transparent',
+                      width: '100%',
+                      fontSize: '14px',
+                      color: '#333',
+                      padding: '8px 0',
+                    }}
+                  />
+                ) : (
+                  <ListItemText
+                    primary={chat.name || 'Untitled Chat'}
+                    sx={{
+                      opacity: isOpen ? 1 : 0,
+                      transition: 'opacity 0.3s ease',
+                      '& .MuiTypography-root': {
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '200px'
+                      }
+                    }}
+                  />
+                )}
               </ListItemButton>
             </ListItem>
           ))}
         </List>
       </Box>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            borderRadius: '8px',
+            minWidth: '120px',
+          }
+        }}
+      >
+        <MenuItem 
+          onClick={handleRenameClick}
+          sx={{
+            fontSize: '14px',
+            py: 1,
+            px: 2,
+            '&:hover': {
+              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+            }
+          }}
+        >
+          Rename
+        </MenuItem>
+        <MenuItem 
+          onClick={handleDeleteClick}
+          sx={{
+            fontSize: '14px',
+            py: 1,
+            px: 2,
+            color: '#d32f2f',
+            '&:hover': {
+              backgroundColor: 'rgba(211, 47, 47, 0.04)',
+            }
+          }}
+        >
+          Delete
+        </MenuItem>
+      </Menu>
     </Paper>
   );
 };

@@ -25,9 +25,11 @@ interface Chat {
 
 interface MainContentProps {
   selectedChat: Chat | null;
+  onSendMessage?: (content: string) => Promise<void>;
+  onResendMessage?: (messageId: string, chatId: string, content: string) => Promise<void>;
 }
 
-const MainContent = ({ selectedChat }: MainContentProps) => {
+const MainContent = ({ selectedChat, onSendMessage, onResendMessage }: MainContentProps) => {
   const [step, setStep] = useState(1); // 1: Intro, 2: Upload, 3: Loading, 4: Review, 5: Chatbot
   const [language, setLanguage] = useState('English');
   const [image, setImage] = useState<string | null>(null);
@@ -45,11 +47,16 @@ const MainContent = ({ selectedChat }: MainContentProps) => {
   // Effect to handle selected chat
   useEffect(() => {
     if (selectedChat) {
+      // Set all states first
       setChatId(selectedChat._id);
-      setMessages(selectedChat.messages);
+      setMessages(selectedChat.messages || []);
       setExtractedData(selectedChat.productInformation);
-      setStep(5); // Move to chat step
       setIsFirstMessage(false);
+      setHasSentMessage(selectedChat.messages && selectedChat.messages.length > 0);
+      // Set step to 5 last to avoid flashing step 1
+      requestAnimationFrame(() => {
+        setStep(5);
+      });
     } else {
       // Reset states when no chat is selected
       setStep(1);
@@ -57,12 +64,15 @@ const MainContent = ({ selectedChat }: MainContentProps) => {
       setMessages([]);
       setExtractedData(null);
       setIsFirstMessage(true);
+      setHasSentMessage(false);
     }
   }, [selectedChat]);
 
   // Effect để scroll xuống dưới cùng khi có tin nhắn mới
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   // Giả lập API trích xuất dữ liệu từ ảnh
@@ -231,15 +241,26 @@ const MainContent = ({ selectedChat }: MainContentProps) => {
     }
   };
 
+  const handleSendMessage = async (content: string) => {
+    if (!onSendMessage) return;
+    
+    setIsLoading(true);
+    try {
+      await onSendMessage(content);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="chat-main">
       {/* Avatar */}
       <div className="chat-avatar">T</div>
 
-      {step == 1 && <StepIntro language={language} setLanguage={setLanguage} onStart={() => setStep(2)} />}
-      {step == 2 && <StepUpload onUpload={img => { setImage(img); handleExtractData(); }} />}
-      {step == 3 && <StepLoading step={loadingStep} />}
-      {step == 4 && extractedData && <StepReview data={extractedData} setData={setExtractedData} onContinue={async () => {
+      {step === 1 && <StepIntro language={language} setLanguage={setLanguage} onStart={() => setStep(2)} />}
+      {step === 2 && <StepUpload onUpload={img => { setImage(img); handleExtractData(); }} />}
+      {step === 3 && <StepLoading step={loadingStep} />}
+      {step === 4 && extractedData && <StepReview data={extractedData} setData={setExtractedData} onContinue={async () => {
         try {
           // API 1: Upload image to get static link
           const formData = new FormData();
@@ -276,6 +297,8 @@ const MainContent = ({ selectedChat }: MainContentProps) => {
           
           if (createChatData.status === 'success' && createChatData.data && createChatData.data._id) {
             setChatId(createChatData.data._id); // Store chat_id
+            setMessages([]); // Reset messages for new chat
+            setHasSentMessage(false); // Reset hasSentMessage for new chat
           } else {
             throw new Error('Failed to get chat ID from response');
           }
@@ -293,7 +316,7 @@ const MainContent = ({ selectedChat }: MainContentProps) => {
           // Handle error appropriately
         }
       }} />}
-      {step == 5 && (
+      {step === 5 && (
         <div className="chat-container">
           {!hasSentMessage ? (
             <div style={{
@@ -315,7 +338,12 @@ const MainContent = ({ selectedChat }: MainContentProps) => {
             </div>
           ) : (
             <>
-              <ChatHistory messages={messages} messagesEndRef={messagesEndRef} isLoading={isLoading} />
+              <ChatHistory
+                messages={messages}
+                messagesEndRef={messagesEndRef}
+                isLoading={isLoading}
+                onResendMessage={onResendMessage}
+              />
               <ChatInput
                 message={message}
                 setMessage={setMessage}
@@ -338,4 +366,4 @@ const MainContent = ({ selectedChat }: MainContentProps) => {
   );
 };
 
-export default MainContent; 
+export { MainContent }; 

@@ -46,6 +46,7 @@ const ChatInput = ({ message, setMessage, handleSend, handleKeyDown, setShowProd
             maxHeight: '168px', // 7 lines * 24px
             overflowY: 'auto',
             color: '#545454',
+            resize: 'none',
           }}
         />
         <div className="chat-input-actions">
